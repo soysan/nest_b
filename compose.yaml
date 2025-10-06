@@ -3,15 +3,16 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+      target: development
     ports:
       - "3000:3000"
     environment:
       - NODE_ENV=development
       - DATABASE_URL=postgres://user_v2:password_v2@db:5432/mydb_v2
     volumes:
-      - .:/usr/src/app
-      - /usr/src/app/node_modules
-    command: npm run start:dev
+      - .:/app
+      - /app/node_modules
+    command: pnpm run start:dev
     depends_on:
       - db
   db:

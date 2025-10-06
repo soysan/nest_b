@@ -2,21 +2,43 @@ ARG NODE_VERSION=24
 
 FROM node:${NODE_VERSION}-slim AS base
 
+# Install required system packages for development
+RUN apt-get update && apt-get install -y \
+    procps \
+    openssl \
+    && rm -rf /var/lib/apt/lists/* \
+    && npm install -g pnpm
+
 WORKDIR /app
-COPY package*.json ./
-RUN npm ci --omit=dev
+
+COPY package.json pnpm-lock.yaml ./
+
+RUN pnpm install --frozen-lockfile
+
+COPY . .
+
+FROM base AS development
+
+CMD ["pnpm", "run", "start:dev"]
 
 FROM base AS build
-RUN npm run build
-RUN npm prune --omit=dev
+RUN pnpm run build
 
 FROM node:${NODE_VERSION}-slim AS production
 
+# Install required system packages
+RUN apt-get update && apt-get install -y \
+    procps \
+    openssl \
+    && rm -rf /var/lib/apt/lists/* \
+    && npm install -g pnpm
+
 WORKDIR /app
-COPY --from=build /app/package*.json ./
-COPY --from=build /app/node_modules ./node_modules
 
-COPY ./src ./src
+COPY package.json pnpm-lock.yaml ./
 
-EXPOSE 3000
+RUN pnpm install --frozen-lockfile --prod
+
+COPY --from=build /app/dist ./dist
+
 CMD ["node", "dist/main"]
