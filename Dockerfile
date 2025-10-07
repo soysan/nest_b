@@ -40,5 +40,7 @@ COPY package.json pnpm-lock.yaml ./
 RUN pnpm install --frozen-lockfile --prod
 
 COPY --from=build /app/dist ./dist
+COPY --from=build /app/src/generated ./src/generated
+COPY --from=build /app/prisma ./prisma
 
 CMD ["node", "dist/main"]
