@@ -7,24 +7,45 @@ services:
     ports:
       - "3000:3000"
     environment:
-      - NODE_ENV=development
-      - DATABASE_URL=postgres://user_v2:password_v2@db:5432/mydb_v2
+      - NODE_ENV=${NODE_ENV}
+      - DATABASE_URL=${DATABASE_URL}
     volumes:
       - .:/app
       - /app/node_modules
     command: pnpm run start:dev
     depends_on:
       - db
+    env_file: .env
   db:
     image: postgres:17
+    env_file: .env
     environment:
-      POSTGRES_USER: user_v2
-      POSTGRES_PASSWORD: password_v2
-      POSTGRES_DB: mydb_v2
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
     ports:
       - "5432:5432"
     volumes:
       - db-data:/var/lib/postgresql/data
+  migrator:
+    image: node:24-alpine
+    working_dir: /app
+    volumes:
+      - ./:/app
+    env_file: .env
+    environment:
+      - CI=true
+    depends_on:
+      - db
+    command: >
+      sh -c "
+        corepack enable || true &&
+        corepack prepare pnpm@latest --activate || true &&
+        pnpm install --frozen-lockfile &&
+        npx prisma generate &&
+        npx prisma migrate deploy
+      "
+    restart: "no"
 
 volumes:
   db-data:
