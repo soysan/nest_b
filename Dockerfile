@@ -5,67 +5,65 @@ FROM node:${NODE_VERSION}-slim AS base
 
 # 必要なシステムパッケージをインストール
 RUN apt-get update && apt-get install -y \
+    procps \
     openssl \
     && rm -rf /var/lib/apt/lists/* \
-    && npm install -g pnpm
+    && corepack enable && corepack prepare pnpm@latest --activate
 
 WORKDIR /app
 
-# パッケージファイルをコピーして依存関係をキャッシュ
-COPY package.json pnpm-lock.yaml ./
-
 FROM base AS development
 
-# 開発に必要な追加パッケージ
-RUN apt-get update && apt-get install -y \
-    procps \
-    && rm -rf /var/lib/apt/lists/*
+# package.jsonだけ先にコピー（キャッシュ最適化）
+COPY package.json pnpm-lock.yaml ./
 
 # 開発依存関係を含む全依存関係をインストール
 RUN pnpm install --frozen-lockfile
 
+# 残りのファイルをコピー
 COPY . .
 
-CMD ["pnpm", "run", "start:dev"]
+RUN npx prisma generate || true
 
-FROM base AS dependencies
+# ログ出力を確実にするため、バッファリングを無効化
+# ENV NODE_OPTIONS="--max-old-space-size=4096"
+ENV FORCE_COLOR=1
 
-# 本番依存関係のみインストール
-RUN pnpm install --frozen-lockfile --prod
+CMD ["sh", "-c", "pnpm run start:dev 2>&1"]
 
 FROM base AS build
 
-# ビルドに必要な全依存関係をインストール
+COPY package.json pnpm-lock.yaml ./
+
+# ビルドに必要な全依存関係をインストール (devDependenciesも含む)
 RUN pnpm install --frozen-lockfile
 
 COPY . .
 
 RUN pnpm run build
 
+ARG NODE_VERSION
 FROM node:${NODE_VERSION}-slim AS production
-
-# 本番環境に必要な最小限のパッケージのみ
-RUN apt-get update && apt-get install -y \
-    openssl \
-    && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 
-# 本番用依存関係のみコピー
-COPY --from=dependencies /app/node_modules ./node_modules
+RUN apt-get update && apt-get install -y \
+    procps \
+    openssl \
+    && rm -rf /var/lib/apt/lists/* \
+    && corepack enable && corepack prepare pnpm@latest --activate
 
-# ビルド済みアプリケーションをコピー
-COPY --from=build /app/dist ./dist
-COPY --from=build /app/src/generated ./src/generated
+COPY package.json pnpm-lock.yaml ./
+RUN pnpm install --frozen-lockfile --prod
+
 COPY --from=build /app/prisma ./prisma
-
-# パッケージファイルをコピー（メタデータ用）
-COPY package.json ./
+COPY --from=build /app/dist ./dist
+COPY --from=build /app/node_modules/.prisma ./node_modules/.prisma
 
 # 非rootユーザーを作成してセキュリティを向上
-RUN addgroup --system --gid 1001 nodejs
-RUN adduser --system --uid 1001 nestjs
+RUN addgroup --system --gid 1001 nodejs && \
+    adduser --system --uid 1001 nestjs
 USER nestjs
 
 # アプリケーションを起動
-CMD ["node", "dist/main"]
+CMD ["node", "dist/main.js"]

@@ -11,13 +11,15 @@ services:
     environment:
       - NODE_ENV=${NODE_ENV}
       - DATABASE_URL=${DATABASE_URL}
+      - FORCE_COLOR=1
     volumes:
-      - .:/app
       - /app/node_modules
-    command: pnpm run start:dev
+      - ./:/app
     depends_on:
       - db
     env_file: .env
+    tty: true
+    stdin_open: true
   db:
     image: postgres:17
     env_file: .env
