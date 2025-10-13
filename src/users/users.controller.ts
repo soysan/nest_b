@@ -1,11 +1,18 @@
-import { Controller, Get, Post, Put, Delete, Param, Body, ValidationPipe, UsePipes } from '@nestjs/common';
+import { Controller, Get, Post, Put, Delete, Param, Body, ValidationPipe, UsePipes, UseGuards, Request } from '@nestjs/common';
 import { UsersService } from './users.service';
 import { User } from 'src/generated/prisma';
 import { CreateUserDto, UpdateUserDto } from './dto';
+import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 
 @Controller('users')
 export class UsersController {
   constructor(private readonly usersService: UsersService) { }
+
+  @Get('me')
+  @UseGuards(JwtAuthGuard)
+  async getMe(@Request() req): Promise<Omit<User, 'password'> | null> {
+    return this.usersService.me(req.user.sub);
+  }
 
   @Get()
   async findAll(): Promise<User[]> {
@@ -15,6 +22,12 @@ export class UsersController {
   @Get(':id')
   async findOne(@Param('id') id: string): Promise<User | null> {
     return this.usersService.findOne(id);
+  }
+
+  @Post('register')
+  @UsePipes(new ValidationPipe({ transform: true }))
+  async register(@Body() createUserDto: CreateUserDto): Promise<User> {
+    return this.usersService.create(createUserDto);
   }
 
   @Post()
