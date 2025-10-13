@@ -10,30 +10,30 @@ export class CustomLogger implements LoggerService {
 
   log(message: any, context?: string) {
     const logContext = context || this.context || 'Application';
-    console.log(`[${this.nowDate()}] [LOG] [${logContext}] ${this.formatMessage(message)}`);
+    console.log(`[${this.now()}] [INFO] [${logContext}] ${this.formatMessage(message)}`);
   }
 
   error(message: any, trace?: string, context?: string) {
     const logContext = context || this.context || 'Application';
-    console.error(`[${this.nowDate()}] [ERROR] [${logContext}] ${this.formatMessage(message)}`);
+    console.error(`[${this.now()}] [ERROR] [${logContext}] ${this.formatMessage(message)}`);
     if (trace) {
-      console.error(`[${this.nowDate()}] [TRACE] ${trace}`);
+      console.error(`[${this.now()}] [TRACE] ${trace}`);
     }
   }
 
   warn(message: any, context?: string) {
     const logContext = context || this.context || 'Application';
-    console.warn(`[${this.nowDate()}] [WARN] [${logContext}] ${this.formatMessage(message)}`);
+    console.warn(`[${this.now()}] [WARN] [${logContext}] ${this.formatMessage(message)}`);
   }
 
   debug(message: any, context?: string) {
     const logContext = context || this.context || 'Application';
-    console.debug(`[${this.nowDate()}] [DEBUG] [${logContext}] ${this.formatMessage(message)}`);
+    console.debug(`[${this.now()}] [DEBUG] [${logContext}] ${this.formatMessage(message)}`);
   }
 
   verbose(message: any, context?: string) {
     const logContext = context || this.context || 'Application';
-    console.log(`[${this.nowDate()}] [VERBOSE] [${logContext}] ${this.formatMessage(message)}`);
+    console.log(`[${this.now()}] [VERBOSE] [${logContext}] ${this.formatMessage(message)}`);
   }
 
   private formatMessage(message: any): string {
@@ -43,7 +43,7 @@ export class CustomLogger implements LoggerService {
     return String(message);
   }
 
-  private nowDate(): string {
+  private now(): string {
     return new Date().toISOString();
   }
 }
