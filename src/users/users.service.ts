@@ -34,7 +34,7 @@ export class UsersService {
         name: true,
         createdAt: true,
         updatedAt: true,
-        password: false, // パスワードを明示的に除外
+        password: false,
       },
     });
   }
