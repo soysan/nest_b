@@ -20,6 +20,6 @@ import { LoggerModule } from './common/logger/logger.module';
     }),
   ],
   controllers: [AppController],
-  providers: [AppService, PrismaService],
+  providers: [AppService],
 })
 export class AppModule { }
