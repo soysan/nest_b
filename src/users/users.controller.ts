@@ -1,4 +1,19 @@
-import { Controller, Get, Post, Put, Delete, Param, Body, ValidationPipe, UsePipes, UseGuards, Request } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Put,
+  Delete,
+  Param,
+  Body,
+  ValidationPipe,
+  UsePipes,
+  UseGuards,
+  Request,
+  NotFoundException,
+  HttpCode,
+  HttpStatus,
+} from '@nestjs/common';
 import { UsersService } from './users.service';
 import { User } from 'src/generated/prisma';
 import { CreateUserDto, UpdateUserDto } from './dto';
@@ -15,38 +30,44 @@ export class UsersController {
   }
 
   @Get()
-  async findAll(): Promise<User[]> {
+  async findAll(): Promise<Omit<User, 'password'>[]> {
     return this.usersService.findAll();
   }
 
   @Get(':id')
-  async findOne(@Param('id') id: string): Promise<User | null> {
-    return this.usersService.findOne(id);
+  async findOne(@Param('id') id: string): Promise<Omit<User, 'password'>> {
+    const user = await this.usersService.findOne(id);
+    if (!user) {
+      throw new NotFoundException(`User with ID ${id} not found`);
+    }
+    return user;
   }
 
   @Post('register')
   @UsePipes(new ValidationPipe({ transform: true }))
-  async register(@Body() createUserDto: CreateUserDto): Promise<User> {
-    return this.usersService.create(createUserDto);
+  async register(@Body() createUserDto: CreateUserDto): Promise<Omit<User, 'password'>> {
+    return this.usersService.createWithHashedPassword(createUserDto);
   }
 
   @Post()
   @UsePipes(new ValidationPipe({ transform: true }))
-  async create(@Body() createUserDto: CreateUserDto): Promise<User> {
-    return this.usersService.create(createUserDto);
+  async create(@Body() createUserDto: CreateUserDto): Promise<Omit<User, 'password'>> {
+    return this.usersService.createWithHashedPassword(createUserDto);
   }
 
   @Put(':id')
+  @UseGuards(JwtAuthGuard)
   @UsePipes(new ValidationPipe({ transform: true }))
   async update(
     @Param('id') id: string,
     @Body() updateUserDto: UpdateUserDto,
-  ): Promise<User> {
+  ): Promise<Omit<User, 'password'>> {
     return this.usersService.update(id, updateUserDto);
   }
 
   @Delete(':id')
-  async delete(@Param('id') id: string): Promise<User> {
+  @UseGuards(JwtAuthGuard)
+  async delete(@Param('id') id: string): Promise<Omit<User, 'password'>> {
     return this.usersService.delete(id);
   }
 }

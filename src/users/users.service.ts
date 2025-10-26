@@ -26,17 +26,17 @@ export class UsersService {
 
   async me(userId: string): Promise<Omit<User, 'password'> | null> {
     this.logger.log(`Getting user profile for userId: ${userId}`);
-    return this.prisma.user.findUnique({
+    const user = await this.prisma.user.findUnique({
       where: { id: userId },
-      select: {
-        id: true,
-        email: true,
-        name: true,
-        createdAt: true,
-        updatedAt: true,
-        password: false,
-      },
     });
+
+    if (!user) {
+      return null;
+    }
+
+    // Exclude password from the result
+    const { password, ...result } = user;
+    return result;
   }
 
   async users(params: {
@@ -57,14 +57,22 @@ export class UsersService {
     });
   }
 
-  async findAll(): Promise<User[]> {
-    return this.prisma.user.findMany();
+  async findAll(): Promise<Omit<User, 'password'>[]> {
+    const users = await this.prisma.user.findMany();
+    return users.map(({ password, ...user }) => user);
   }
 
-  async findOne(id: string): Promise<User | null> {
-    return this.prisma.user.findUnique({
+  async findOne(id: string): Promise<Omit<User, 'password'> | null> {
+    const user = await this.prisma.user.findUnique({
       where: { id },
     });
+
+    if (!user) {
+      return null;
+    }
+
+    const { password, ...result } = user;
+    return result;
   }
 
   async findByEmail(email: string): Promise<Omit<User, 'password'> | null> {
@@ -99,7 +107,21 @@ export class UsersService {
     });
   }
 
-  async update(id: string, updateUserDto: UpdateUserDto): Promise<User> {
+  async createWithHashedPassword(createUserDto: CreateUserDto): Promise<Omit<User, 'password'>> {
+    const hashedPassword = await bcrypt.hash(createUserDto.password, 10);
+    const user = await this.prisma.user.create({
+      data: {
+        email: createUserDto.email,
+        name: createUserDto.name,
+        password: hashedPassword,
+      },
+    });
+
+    const { password, ...result } = user;
+    return result;
+  }
+
+  async update(id: string, updateUserDto: UpdateUserDto): Promise<Omit<User, 'password'>> {
     const updateData: Prisma.UserUpdateInput = {};
 
     if (updateUserDto.email) updateData.email = updateUserDto.email;
@@ -108,15 +130,21 @@ export class UsersService {
       updateData.password = await bcrypt.hash(updateUserDto.password, 10);
     }
 
-    return this.prisma.user.update({
+    const user = await this.prisma.user.update({
       where: { id },
       data: updateData,
     });
+
+    const { password, ...result } = user;
+    return result;
   }
 
-  async delete(email: string): Promise<User> {
-    return this.prisma.user.delete({
-      where: { email },
+  async delete(id: string): Promise<Omit<User, 'password'>> {
+    const user = await this.prisma.user.delete({
+      where: { id },
     });
+
+    const { password, ...result } = user;
+    return result;
   }
 }
