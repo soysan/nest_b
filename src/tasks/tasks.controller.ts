@@ -20,7 +20,7 @@ import { CreateTaskDto, UpdateTaskDto } from './dto';
 @Controller('tasks')
 @UseGuards(JwtAuthGuard)
 export class TasksController {
-  constructor(private readonly tasksService: TasksService) {}
+  constructor(private readonly tasksService: TasksService) { }
 
   @Get()
   async tasks(@Request() req) {
@@ -32,11 +32,11 @@ export class TasksController {
   @Get(':id')
   async getTask(@Request() req, @Param('id') id: string) {
     const userId = req.user.sub;
-    
+
     return this.tasksService.getTaskById(id, userId);
   }
 
-    @Post()
+  @Post()
   @HttpCode(HttpStatus.CREATED)
   @UsePipes(new ValidationPipe({ transform: true }))
   async createTask(@Request() req, @Body() createTaskDto: CreateTaskDto) {
