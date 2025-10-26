@@ -6,9 +6,16 @@ import {
   Post,
   Delete,
   Get,
+  Patch,
+  Param,
+  HttpCode,
+  HttpStatus,
+  ValidationPipe,
+  UsePipes,
 } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { TasksService } from './tasks.service';
+import { CreateTaskDto, UpdateTaskDto } from './dto';
 
 @Controller('tasks')
 @UseGuards(JwtAuthGuard)
@@ -22,29 +29,40 @@ export class TasksController {
     return this.tasksService.getAll(userId);
   }
 
-  @Post('create')
-  async createTask(@Request() req, @Body() body) {
+  @Get(':id')
+  async getTask(@Request() req, @Param('id') id: string) {
     const userId = req.user.sub;
-
-    return this.tasksService.create(body.title, body.description, userId);
+    
+    return this.tasksService.getTaskById(id, userId);
   }
 
-  @Post('update')
-  async updateTask(@Request() req, @Body() body) {
+    @Post()
+  @HttpCode(HttpStatus.CREATED)
+  @UsePipes(new ValidationPipe({ transform: true }))
+  async createTask(@Request() req, @Body() createTaskDto: CreateTaskDto) {
+    const userId = req.user.sub;
+
+    return this.tasksService.create(createTaskDto.title, createTaskDto.description, userId);
+  }
+
+  @Patch(':id')
+  @UsePipes(new ValidationPipe({ transform: true }))
+  async updateTask(@Request() req, @Param('id') id: string, @Body() updateTaskDto: UpdateTaskDto) {
     const userId = req.user.sub;
 
     return this.tasksService.update(
-      body.id,
-      body.title,
-      body.description,
+      id,
+      updateTaskDto.title,
       userId,
+      updateTaskDto.status,
     );
   }
 
-  @Delete('delete')
-  async deleteTask(@Request() req, @Body() body) {
+  @Delete(':id')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  async deleteTask(@Request() req, @Param('id') id: string) {
     const userId = req.user.sub;
 
-    return this.tasksService.delete(body.id, userId);
+    await this.tasksService.delete(id, userId);
   }
 }

@@ -5,7 +5,7 @@ import {
   InternalServerErrorException,
 } from '@nestjs/common';
 import { CustomLogger } from '../common/logger/custom-logger.service';
-import { Task, Prisma } from '*/generated/prisma';
+import { Task, Prisma } from 'src/generated/prisma';
 import { PrismaService } from '../prisma/prisma.service';
 
 @Injectable()
@@ -89,24 +89,42 @@ export class TasksService {
 
   async update(
     id: string,
-    title: string,
-    description: string,
+    title: string | undefined,
     userId: string,
+    status?: string,
   ): Promise<Task> {
     this.logger.log(`Updating task: ${id} for user: ${userId}`);
     try {
       await this.getTaskById(id, userId);
 
+      const updateData: any = {};
+      if (title !== undefined) updateData.title = title;
+      if (status !== undefined) {
+        // Convert lowercase status to uppercase enum value
+        const upperStatus = status.toUpperCase();
+        if (['TODO', 'IN_PROGRESS', 'DONE'].includes(upperStatus)) {
+          updateData.status = upperStatus;
+        } else if (status === 'completed') {
+          // Handle 'completed' as alias for 'DONE'
+          updateData.status = 'DONE';
+        }
+      }
+
       return await this.prismaService.task.update({
         where: { id },
-        data: {
-          title,
-          description,
-        },
+        data: updateData,
       });
     } catch (error) {
       if (error instanceof NotFoundException) {
         throw error;
+      }
+      // P2025: Record not found for update
+      if (
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === 'P2025'
+      ) {
+        this.logger.warn(`Update task failed: Task not found - ${id}`);
+        throw new NotFoundException('Task not found');
       }
       this.logger.error(`Failed to update task: ${error.message}`, error.stack);
       throw new InternalServerErrorException('Failed to update task');
@@ -124,6 +142,14 @@ export class TasksService {
     } catch (error) {
       if (error instanceof NotFoundException) {
         throw error;
+      }
+      // P2025: Record not found for delete
+      if (
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === 'P2025'
+      ) {
+        this.logger.warn(`Delete task failed: Task not found - ${id}`);
+        throw new NotFoundException('Task not found');
       }
       this.logger.error(`Failed to delete task: ${error.message}`, error.stack);
       throw new InternalServerErrorException('Failed to delete task');
