@@ -36,6 +36,7 @@ lerna-debug.log*
 /generated/prisma
 
 .env
+.env.test
 
 src/generated/*
 .pnpm-store/
