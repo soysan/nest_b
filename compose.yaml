@@ -7,7 +7,7 @@ services:
       args:
         - TARGET=${TARGET:-development}
     ports:
-      - "3000:3000"
+      - '3000:3000'
     environment:
       - NODE_ENV=${NODE_ENV}
       - DATABASE_URL=${DATABASE_URL}
@@ -28,9 +28,20 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       POSTGRES_DB: ${POSTGRES_DB}
     ports:
-      - "5432:5432"
+      - '5432:5432'
     volumes:
       - db-data:/var/lib/postgresql/data
+  db-test:
+    image: postgres:17
+    env_file: .env.test
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: mydb_v2_test
+    ports:
+      - '5433:5432'
+    volumes:
+      - db-test-data:/var/lib/postgresql/data
   migrator:
     image: node:24-alpine
     working_dir: /app
@@ -49,7 +60,8 @@ services:
         npx prisma generate &&
         npx prisma migrate deploy
       "
-    restart: "no"
+    restart: 'no'
 
 volumes:
   db-data:
+  db-test-data:

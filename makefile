@@ -27,6 +27,10 @@ help:
 	@echo "  make prisma-studio   - Prisma Studioを起動"
 	@echo "  make dev             - 開発環境を起動（up + logs）"
 	@echo "  make prod            - 本番モードでビルド＆起動"
+	@echo "  make test-db-up      - テスト用データベースを起動"
+	@echo "  make test-db-down    - テスト用データベースを停止"
+	@echo "  make test-db-migrate - テスト用データベースにマイグレーションを適用"
+	@echo "  make test-e2e        - E2Eテストを実行（テスト用DB使用）"
 
 # Docker Compose コマンド
 .PHONY: up
@@ -117,3 +121,27 @@ dev:
 .PHONY: prod
 prod:
 	TARGET=production docker compose up --build -d
+
+# テスト用データベース管理
+.PHONY: test-db-up
+test-db-up:
+	docker compose up -d db-test
+
+.PHONY: test-db-down
+test-db-down:
+	docker compose stop db-test
+
+.PHONY: test-db-migrate
+test-db-migrate:
+	docker compose exec app sh -c "DATABASE_URL=postgresql://postgres:password@db-test:5432/mydb_v2_test?schema=public npx prisma migrate deploy"
+
+# E2Eテスト実行
+.PHONY: test-e2e
+test-e2e:
+	@echo "テスト用DBを起動中..."
+	@make test-db-up
+	@echo "マイグレーションを適用中..."
+	@sleep 2
+	@make test-db-migrate
+	@echo "E2Eテストを実行中..."
+	@docker compose exec app pnpm test:e2e
